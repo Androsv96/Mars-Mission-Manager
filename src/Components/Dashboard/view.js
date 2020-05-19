@@ -32,6 +32,8 @@ export default function Dashboard({ setOutpostData, setTempetureData }) {
 
   const [isFileSelected, setIsFileSelected] = useState(false);
 
+  let tempData = localStorageGet("data", []);
+
   if (!isFileSelected) {
 
     return (
@@ -56,6 +58,13 @@ export default function Dashboard({ setOutpostData, setTempetureData }) {
         <label htmlFor={"inputFile"}>
           <Button style={Styles.button} variant="contained" color="primary" component="span"><Publish /></Button>
         </label>
+
+        Last files uploaded
+        {
+          tempData.map((currValue, index) => {
+            return <li key={index} onClick={() => onStoredFileSelected(index)}>{currValue.fileName}</li>
+          })
+        }
 
       </Paper >
     )
@@ -113,11 +122,47 @@ export default function Dashboard({ setOutpostData, setTempetureData }) {
       input.value = "";
       return alert(hasEmptyCells);
     }
-
     let averageTemperatures = await getAverageTemperature(data);
+    setAverageTempeture(averageTemperatures);
+
+    setOutpostData({ data });
+    setIsFileSelected(true);
+
+    let dataAlreadyOnStorage = localStorageGet("data", []);
+    localStorageSet("data", [...dataAlreadyOnStorage, { fileName, data }]);
+
+  }
+
+
+  function localStorageSet(key, value) {
+    if (value.toJS)
+      value = value.toJS()
+    if (global.localStorage) {
+      global.localStorage.setItem(key, JSON.stringify(value))
+      return true
+    }
+    return false
+  }
+
+  function localStorageGet(key, default_value) {
+    if (global.localStorage) {
+      return JSON.parse(global.localStorage.getItem(key)) || default_value || null
+    }
+    return default_value
+  }
+
+  async function onStoredFileSelected(filePosition) {
+    let data = localStorageGet("data", []);
+    let averageTemperatures = await getAverageTemperature(data[filePosition].data);
+    setAverageTempeture(averageTemperatures);
+    setIsFileSelected(true);
+    setOutpostData({ data: data[filePosition].data });
+  }
+
+  function setAverageTempeture(data) {
     let newDataStructure = { labels: [DEGREES_LABEL], datasets: [] };
 
-    Object.entries(averageTemperatures).forEach(currTempeture => {
+    Object.entries(data).forEach(currTempeture => {
 
       let randomColor = getRandomBackgroundColor();
 
@@ -132,8 +177,6 @@ export default function Dashboard({ setOutpostData, setTempetureData }) {
     });
 
     setTempetureData({ data: newDataStructure });
-    setOutpostData({ data });
-    setIsFileSelected(true);
 
   }
 
